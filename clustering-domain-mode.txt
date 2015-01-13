@@ -1,0 +1,40 @@
+#cleanup
+:stop-servers(blocking=true)
+/server-group=main-server-group:stop-servers
+/host=master/server-config=server-one:remove
+/host=master/server-config=server-two:remove
+/host=master/server-config=server-three:remove
+/server-group=main-server-group:remove
+/server-group=other-server-group:remove
+
+#add the IP address 192.168.1.4 to the host aliases
+/profile=full-ha/subsystem=undertow/server=default-server/host=default-host:write-attribute(name=alias, value=[192.168.1.4])
+
+#add  backend server group
+/server-group=backend-servers:add(profile=full-ha, socket-binding-group=full-ha-sockets)
+
+#add backend servers, using the full-ha profile so mod_cluster support is included
+/host=master/server-config=backend1:add(group=backend-servers, socket-binding-port-offset=100)
+/host=master/server-config=backend2:add(group=backend-servers, socket-binding-port-offset=200)
+
+
+#start the backend servers
+/server-group=backend-servers:start-servers
+
+
+#add system properties (so we can tell them apart)
+/host=master/server-config=backend1/system-property=server.name:add(boot-time=false, value=backend1)
+/host=master/server-config=backend2/system-property=server.name:add(boot-time=false, value=backend2)
+
+#Deploy the demo to our backend servers
+deploy ~/workspace/load-balancing-demo/target/clustering-demo.war --server-groups=backend-servers
+
+#now set up the default profile to include the mod_cluster load balancer
+/profile=default/subsystem=undertow/configuration=filter/mod-cluster=modcluster:add(management-socket-binding=http, advertise-socket-binding=modcluster)
+/profile=default/subsystem=undertow/server=default-server/host=default-host/filter-ref=modcluster:add
+/socket-binding-group=standard-sockets/socket-binding=modcluster:add(port=23364, multicast-address=224.0.1.105)
+
+/server-group=load-balancer:add(profile=default, socket-binding-group=standard-sockets)
+/host=master/server-config=load-balancer:add(group=load-balancer)
+/server-group=load-balancer:start-servers
+
