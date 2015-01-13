@@ -1,14 +1,22 @@
-#cleanup
+#IMPORTANT: this config is not suitable for production use, as it only uses a single network interface
+#for production use the socket bindings used by modcluster (management and advertise) should be only 
+#exposed to the internal network, not a public IP
+
+
+
+#cleanup existing servers that are enabled by default
 :stop-servers(blocking=true)
-/server-group=main-server-group:stop-servers
 /host=master/server-config=server-one:remove
 /host=master/server-config=server-two:remove
 /host=master/server-config=server-three:remove
 /server-group=main-server-group:remove
 /server-group=other-server-group:remove
 
-#add the IP address 192.168.1.4 to the host aliases
-/profile=full-ha/subsystem=undertow/server=default-server/host=default-host:write-attribute(name=alias, value=[192.168.1.4])
+#add the IP address 192.168.1.4 to the host aliases (replace with your local IP)
+/profile=ha/subsystem=undertow/server=default-server/host=default-host:write-attribute(name=alias, value=[192.168.1.4])
+
+#set the mod_cluster security key
+/profile=ha/subsystem=modcluster/mod-cluster-config=configuration:write-attribute(name=advertise-security-key, value=mypassword)
 
 #add  backend server group
 /server-group=backend-servers:add(profile=ha, socket-binding-group=ha-sockets)
@@ -30,7 +38,7 @@
 deploy ~/workspace/modcluster-example/load-balancing-demo/target/clustering-demo.war --server-groups=backend-servers
 
 #now set up the default profile to include the mod_cluster load balancer
-/profile=default/subsystem=undertow/configuration=filter/mod-cluster=modcluster:add(management-socket-binding=http, advertise-socket-binding=modcluster)
+/profile=default/subsystem=undertow/configuration=filter/mod-cluster=modcluster:add(management-socket-binding=http, advertise-socket-binding=modcluster, security-key=mypassword)
 /profile=default/subsystem=undertow/server=default-server/host=default-host/filter-ref=modcluster:add
 /socket-binding-group=standard-sockets/socket-binding=modcluster:add(port=23364, multicast-address=224.0.1.105)
 
