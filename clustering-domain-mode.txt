@@ -40,7 +40,7 @@ deploy ~/workspace/modcluster-example/load-balancing-demo/target/clustering-demo
 #now set up the default profile to include the mod_cluster load balancer
 /profile=default/subsystem=undertow/configuration=filter/mod-cluster=modcluster:add(management-socket-binding=http, advertise-socket-binding=modcluster, security-key=mypassword)
 /profile=default/subsystem=undertow/server=default-server/host=default-host/filter-ref=modcluster:add
-/socket-binding-group=standard-sockets/socket-binding=modcluster:add(port=23364, multicast-address=224.0.1.105)
+/socket-binding-group=standard-sockets/socket-binding=modcluster:add(multicast-port=23364, multicast-address=224.0.1.105)
 
 /server-group=load-balancer:add(profile=default, socket-binding-group=standard-sockets)
 /host=master/server-config=load-balancer:add(group=load-balancer)
